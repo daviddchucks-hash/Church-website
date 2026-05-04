@@ -4,6 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Jesus Embassy</title>
+  <meta name="theme-color" content="#2D1B69" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Jesus Embassy" />
+  <meta name="description" content="Welcome to Jesus Embassy — Redeemed Christian Church of God. Join us for worship, sermons, events and more." />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <style>
     /* =============================================
@@ -2345,6 +2352,17 @@
         setTimeout(() => toast.classList.remove('show'), 2500);
       });
     });
+  </script>
+
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js', { scope: '/Church-website-/' })
+          .then(reg => console.log('SW registered, scope:', reg.scope))
+          .catch(err => console.warn('SW registration failed:', err));
+      });
+    }
   </script>
 
 </body>
