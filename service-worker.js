@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jesus-embassy-v1';
+const CACHE_NAME = 'jesus-embassy-v2';
 const BASE = '/Church-website-/';
 
 const PRECACHE_URLS = [
@@ -7,70 +7,81 @@ const PRECACHE_URLS = [
   BASE + 'manifest.json',
   BASE + 'icons/icon-192.png',
   BASE + 'icons/icon-512.png',
-  'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap'
 ];
 
-// Install: pre-cache core assets
+// ── Install: cache core shell ────────────────────────────────────────────────
 self.addEventListener('install', (event) => {
+  self.skipWaiting(); // activate immediately
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return Promise.allSettled(
-        PRECACHE_URLS.map((url) =>
-          cache.add(url).catch(() => {})
-        )
-      );
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then((cache) =>
+      Promise.allSettled(PRECACHE_URLS.map((url) => cache.add(url).catch(() => {})))
+    )
   );
 });
 
-// Activate: clean up old caches
+// ── Activate: purge old caches ───────────────────────────────────────────────
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      )
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then((keys) => Promise.all(
+        keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
-// Fetch: network-first for API calls, cache-first for static assets
+// ── Fetch strategy ───────────────────────────────────────────────────────────
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET and cross-origin API/Telegram calls
+  // Only handle GET; skip cross-origin API calls
   if (request.method !== 'GET') return;
-  if (url.hostname.includes('api.telegram.org')) return;
-  if (url.hostname.includes('formspree.io')) return;
-  if (url.hostname.includes('connect.facebook.net')) return;
+  if (['api.telegram.org', 'connect.facebook.net', 'formspree.io'].some(h => url.hostname.includes(h))) return;
 
-  // Network-first for navigation requests (always serve latest HTML)
-  if (request.mode === 'navigate') {
+  // Google Fonts — cache-first (rarely changes)
+  if (url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com')) {
     event.respondWith(
-      fetch(request)
-        .then((res) => {
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((res) => {
           const clone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          caches.open(CACHE_NAME).then((c) => c.put(request, clone));
           return res;
-        })
-        .catch(() => caches.match(BASE + 'index.html'))
+        });
+      })
     );
     return;
   }
 
-  // Cache-first for static assets (fonts, icons, images)
+  // Icons / images — cache-first
+  if (url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|ico)$/i)) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((res) => {
+          if (!res || res.status !== 200) return res;
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+          return res;
+        });
+      })
+    );
+    return;
+  }
+
+  // HTML / navigation — Network-first, fallback to cache
+  // This ensures users always get the latest content when online
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).then((res) => {
-        if (!res || res.status !== 200 || res.type === 'opaque') return res;
+    fetch(request)
+      .then((res) => {
+        if (!res || res.status !== 200) return res;
         const clone = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        caches.open(CACHE_NAME).then((c) => c.put(request, clone));
         return res;
-      }).catch(() => cached);
-    })
+      })
+      .catch(() =>
+        caches.match(request).then((cached) => cached || caches.match(BASE + 'index.html'))
+      )
   );
 });
