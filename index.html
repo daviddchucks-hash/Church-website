@@ -224,6 +224,109 @@
       font-size: 1.2rem;
     }
 
+    /* Install App button */
+    #pwa-install-btn {
+      display: none;
+      align-items: center;
+      gap: 7px;
+      background: var(--gold);
+      color: #1a0d4a;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 50px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.25s;
+      box-shadow: 0 2px 12px rgba(201,168,76,0.35);
+      flex-shrink: 0;
+    }
+    #pwa-install-btn.visible { display: flex; }
+    #pwa-install-btn:hover {
+      background: var(--gold-light);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 18px rgba(201,168,76,0.5);
+    }
+    #pwa-install-btn svg { flex-shrink: 0; }
+
+    /* PWA install banner (mobile) */
+    #pwa-banner {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--purple-deep);
+      border: 1px solid var(--gold);
+      border-radius: 16px;
+      padding: 14px 20px;
+      z-index: 9999;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      max-width: 340px;
+      width: calc(100% - 40px);
+      animation: slideUp 0.4s ease;
+    }
+    #pwa-banner.visible { display: block; }
+    @keyframes slideUp {
+      from { opacity:0; transform: translateX(-50%) translateY(20px); }
+      to   { opacity:1; transform: translateX(-50%) translateY(0); }
+    }
+    .pwa-banner-inner {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .pwa-banner-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .pwa-banner-text { flex: 1; }
+    .pwa-banner-text strong {
+      display: block;
+      color: var(--white);
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .pwa-banner-text span {
+      color: rgba(255,255,255,0.65);
+      font-size: 0.75rem;
+    }
+    .pwa-banner-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .pwa-banner-install {
+      flex: 1;
+      background: var(--gold);
+      color: #1a0d4a;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .pwa-banner-install:hover { background: var(--gold-light); }
+    .pwa-banner-dismiss {
+      background: rgba(255,255,255,0.1);
+      color: var(--white);
+      border: none;
+      padding: 9px 14px;
+      border-radius: 50px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .pwa-banner-dismiss:hover { background: rgba(255,255,255,0.2); }
+
     .nav-logo-text {
       font-family: 'Playfair Display', serif;
       font-size: 1.2rem;
@@ -1529,6 +1632,12 @@
         <li><a href="#gallery">Gallery</a></li>
         <li><a href="#contact">Contact</a></li>
         <li><a href="https://wa.me/2349036895700" target="_blank" class="nav-cta">Join Us</a></li>
+        <li>
+          <button id="pwa-install-btn" aria-label="Install App">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 16l-6-6h4V4h4v6h4l-6 6zm-7 2h14v2H5v-2z"/></svg>
+            Install App
+          </button>
+        </li>
       </ul>
       <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
         <span></span><span></span><span></span>
@@ -2354,15 +2463,91 @@
     });
   </script>
 
-  <!-- PWA Service Worker Registration -->
+  <!-- PWA Install Banner -->
+  <div id="pwa-banner" role="dialog" aria-label="Install Jesus Embassy app">
+    <div class="pwa-banner-inner">
+      <img src="icons/icon-192.png" class="pwa-banner-icon" alt="Jesus Embassy" />
+      <div class="pwa-banner-text">
+        <strong>Install Jesus Embassy</strong>
+        <span>Add to your home screen for quick access</span>
+      </div>
+    </div>
+    <div class="pwa-banner-actions">
+      <button class="pwa-banner-install" id="pwa-banner-install-btn">⬇ Install App</button>
+      <button class="pwa-banner-dismiss" id="pwa-banner-dismiss-btn">Not now</button>
+    </div>
+  </div>
+
+  <!-- PWA: Service Worker + Install Prompt -->
   <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js', { scope: '/Church-website-/' })
-          .then(reg => console.log('SW registered, scope:', reg.scope))
-          .catch(err => console.warn('SW registration failed:', err));
+    (function () {
+      let deferredPrompt = null;
+      const installBtn   = document.getElementById('pwa-install-btn');
+      const banner       = document.getElementById('pwa-banner');
+      const bannerInstall = document.getElementById('pwa-banner-install-btn');
+      const bannerDismiss = document.getElementById('pwa-banner-dismiss-btn');
+
+      // ── 1. Register Service Worker ──────────────────────────────────────
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker
+            .register('service-worker.js', { scope: '/Church-website-/' })
+            .then((reg) => {
+              console.log('[SW] Registered, scope:', reg.scope);
+              // Check for updates every 60 s
+              setInterval(() => reg.update(), 60000);
+            })
+            .catch((err) => console.warn('[SW] Registration failed:', err));
+        });
+      }
+
+      // ── 2. Capture the install prompt before browser consumes it ────────
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();           // stop mini-infobar
+        deferredPrompt = e;
+        showInstallUI();
       });
-    }
+
+      // ── 3. Show install button + banner ─────────────────────────────────
+      function showInstallUI() {
+        installBtn.classList.add('visible');
+        // Show banner only if user hasn't dismissed it this session
+        if (!sessionStorage.getItem('pwa-banner-dismissed')) {
+          setTimeout(() => banner.classList.add('visible'), 2500);
+        }
+      }
+
+      // ── 4. Trigger native install prompt ────────────────────────────────
+      async function triggerInstall() {
+        if (!deferredPrompt) return;
+        banner.classList.remove('visible');
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log('[PWA] Install outcome:', outcome);
+        deferredPrompt = null;
+        if (outcome === 'accepted') hideInstallUI();
+      }
+
+      function hideInstallUI() {
+        installBtn.classList.remove('visible');
+        banner.classList.remove('visible');
+      }
+
+      // ── 5. Wire up buttons ───────────────────────────────────────────────
+      installBtn.addEventListener('click', triggerInstall);
+      bannerInstall.addEventListener('click', triggerInstall);
+      bannerDismiss.addEventListener('click', () => {
+        banner.classList.remove('visible');
+        sessionStorage.setItem('pwa-banner-dismissed', '1');
+      });
+
+      // ── 6. Hide UI once app is installed ────────────────────────────────
+      window.addEventListener('appinstalled', () => {
+        console.log('[PWA] App installed!');
+        hideInstallUI();
+        deferredPrompt = null;
+      });
+    })();
   </script>
 
 </body>
