@@ -2768,7 +2768,7 @@
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker
-            .register('service-worker.js', { scope: '/Church-website-/' })
+            .register('service-worker.js', { scope: '/Church-website/' })
             .then((reg) => {
               console.log('[SW] Registered, scope:', reg.scope);
               // Check for updates every 60 s
@@ -2825,6 +2825,49 @@
         deferredPrompt = null;
       });
     })();
+    
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCuAIyM54XWy4DaYqoFYoEIUP0mQNaZQY4",
+    authDomain: "church-app-637f7.firebaseapp.com",
+    projectId: "church-app-637f7",
+    storageBucket: "church-app-637f7.firebasestorage.app",
+    messagingSenderId: "534721516086",
+    appId: "1:534721516086:web:1dd27eae690c620098be97"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+
+  const messaging = firebase.messaging();
+  
+  if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/firebase-messaging-sw.js")
+    .then(() => console.log("Service Worker registered"));
+}
+</script>
+function enableNotifications() {
+
+  Notification.requestPermission().then(permission => {
+
+    if (permission === "granted") {
+
+      messaging.getToken({
+        vapidKey: "BD9OJEHu9mVHq9TuPn89avERMGT09er4ZZQzRMvHRaP379C6Xocoq6GW5OtB4SlJEwvIKH8iER6xnBYP7y0kbV8"
+      }).then(token => {
+
+        console.log("DEVICE TOKEN:", token);
+        alert("Notifications enabled!");
+
+      });
+
+    }
+
+  });
+
+}
   </script>
 
 </body>
