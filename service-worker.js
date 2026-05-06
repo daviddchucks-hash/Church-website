@@ -1,5 +1,5 @@
 const CACHE_NAME = 'jesus-embassy-v2';
-const BASE = '/Church-website-/';
+const BASE = '/Church-website/';
 
 const PRECACHE_URLS = [
   BASE,
