@@ -1,13 +1,16 @@
 /* ================================================================
-   firebase-messaging-sw.js
-   Firebase Cloud Messaging Service Worker — Jesus Embassy PWA
-   Place this file in the ROOT of your project (same level as index.html)
+   firebase-messaging-sw.js — Jesus Embassy PWA
+   Location:  ROOT of repository  (same level as index.html)
+   Served at: https://daviddchucks-hash.github.io/Church-website/firebase-messaging-sw.js
+
+   GitHub Pages project site base: /Church-website/
+   ── DO NOT rename or move this file ──────────────────────────
 ================================================================ */
 
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-/* ── Firebase config (must match index.html exactly) ─────────── */
+/* ── Firebase config — must be identical to index.html ────────── */
 firebase.initializeApp({
   apiKey:            'AIzaSyCuAIyM54XWy4DaYqoFYoEIUP0mQNaZQY4',
   authDomain:        'church-app-637f7.firebaseapp.com',
@@ -20,88 +23,104 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-/* ── Background message handler ─────────────────────────────────
-   Fires when a push arrives while the app is in the background,
+/* GitHub Pages base path */
+const BASE = '/Church-website';
+
+/* ================================================================
+   BACKGROUND MESSAGE HANDLER
+   Fires when a push arrives while the site is in the background,
    minimised, or the tab is closed.
-   Firebase will auto-display a default notification; this handler
-   lets you customise title, body, icon, and actions.
-──────────────────────────────────────────────────────────────── */
+================================================================ */
 messaging.onBackgroundMessage((payload) => {
-  console.log('[FCM SW] Background message received:', payload);
+  console.log('[FCM SW] Background message:', payload);
 
-  const { title, body, icon, image, clickAction } = payload.notification || {};
-  const data = payload.data || {};
+  const n    = payload.notification || {};
+  const data = payload.data         || {};
 
-  const notificationTitle = title || 'Jesus Embassy';
-  const notificationOptions = {
-    body:    body  || 'You have a new message from Jesus Embassy.',
-    icon:    icon  || '/Church-website-/icons/icon-192.png',
-    badge:   '/Church-website-/icons/icon-96.png',
-    image:   image || undefined,
-    tag:     data.tag || 'je-notification',   // collapses duplicate notifications
-    renotify: false,
+  const title    = n.title || 'Jesus Embassy';
+  const body     = n.body  || 'You have a new update from Jesus Embassy.';
+  const icon     = n.icon  || `${BASE}/icons/icon-192.png`;
+  const badge    = `${BASE}/icons/icon-96.png`;
+  const tag      = data.tag || 'je-push';
+  const clickUrl = n.click_action || data.url || `https://daviddchucks-hash.github.io${BASE}/`;
+
+  return self.registration.showNotification(title, {
+    body,
+    icon,
+    badge,
+    image:              n.image || undefined,
+    tag,
+    renotify:           false,
     requireInteraction: false,
-    vibrate: [200, 100, 200],
-    data: {
-      url: clickAction || data.url || '/Church-website-/',
-      ...data
-    },
+    vibrate:            [200, 100, 200, 100, 200],
+    data:               { url: clickUrl, ...data },
     actions: [
-      { action: 'open',    title: '🙏 Open App'   },
-      { action: 'dismiss', title: 'Dismiss'        }
+      { action: 'open',    title: '🙏 Open App' },
+      { action: 'dismiss', title: '✕ Dismiss'   }
     ]
-  };
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  });
 });
 
-/* ── Notification click handler ─────────────────────────────────
-   Handles taps on background notifications.
-──────────────────────────────────────────────────────────────── */
+/* ================================================================
+   NOTIFICATION CLICK HANDLER
+================================================================ */
 self.addEventListener('notificationclick', (event) => {
+  console.log('[FCM SW] Notification clicked, action:', event.action);
   event.notification.close();
 
   if (event.action === 'dismiss') return;
 
-  const url = (event.notification.data && event.notification.data.url)
+  const targetUrl = (event.notification.data && event.notification.data.url)
     ? event.notification.data.url
-    : '/Church-website-/';
+    : `https://daviddchucks-hash.github.io${BASE}/`;
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      /* If app window is already open, focus it */
-      for (const client of windowClients) {
-        if (client.url.includes('/Church-website-/') && 'focus' in client) {
-          return client.focus();
+    clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((windowClients) => {
+        for (const client of windowClients) {
+          if (client.url.startsWith(`https://daviddchucks-hash.github.io${BASE}`) &&
+              'focus' in client) {
+            return client.focus();
+          }
         }
-      }
-      /* Otherwise open a new window */
-      if (clients.openWindow) {
-        return clients.openWindow(url);
-      }
-    })
+        if (clients.openWindow) return clients.openWindow(targetUrl);
+      })
   );
 });
 
-/* ── Push event fallback ─────────────────────────────────────────
-   In case the FCM SDK doesn't handle the raw push event.
-──────────────────────────────────────────────────────────────── */
+/* ================================================================
+   RAW PUSH FALLBACK
+   Fires for any push the FCM SDK does not intercept.
+================================================================ */
 self.addEventListener('push', (event) => {
   if (!event.data) return;
 
   let payload = {};
-  try { payload = event.data.json(); } catch (_) {
+  try {
+    payload = event.data.json();
+  } catch (_) {
     payload = { notification: { title: 'Jesus Embassy', body: event.data.text() } };
   }
 
-  const { title, body, icon } = payload.notification || {};
+  if (payload.notification && payload.notification.handled) return;
+
+  const n     = payload.notification || {};
+  const title = n.title || 'Jesus Embassy';
 
   event.waitUntil(
-    self.registration.showNotification(title || 'Jesus Embassy', {
-      body:  body || 'You have a new update.',
-      icon:  icon || '/Church-website-/icons/icon-192.png',
-      badge: '/Church-website-/icons/icon-96.png',
-      data:  { url: '/Church-website-/' }
+    self.registration.showNotification(title, {
+      body:  n.body  || 'You have a new message.',
+      icon:  n.icon  || `${BASE}/icons/icon-192.png`,
+      badge: `${BASE}/icons/icon-96.png`,
+      tag:   'je-fallback',
+      data:  { url: `https://daviddchucks-hash.github.io${BASE}/` }
     })
   );
 });
+
+/* ================================================================
+   LIFECYCLE — activate immediately, no waiting
+================================================================ */
+self.addEventListener('install',  ()  => self.skipWaiting());
+self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));

@@ -2986,7 +2986,8 @@
   <script>
   /* ================================================================
      FIREBASE PUSH NOTIFICATIONS — Jesus Embassy
-     Does NOT touch any existing code in this file.
+     GitHub Pages repo: daviddchucks-hash.github.io/Church-website/
+     Fixed: SW path, scope, deprecated useServiceWorker, standalone bell
   ================================================================ */
   (function () {
     'use strict';
@@ -3002,7 +3003,11 @@
       measurementId:     'G-JJL8SP6LNW'
     };
 
+    /* VAPID public key from Firebase Console → Project Settings → Cloud Messaging */
     const VAPID_KEY = 'BD9OJEHu9mVHq9TuPn89avERMGT09er4ZZQzRMvHRaP379C6Xocoq6GW5OtB4SlJEwvIKH8iER6xnBYP7y0kbV8';
+
+    /* GitHub Pages project site base path — MUST match repo name exactly */
+    const GH_BASE = '/Church-website';
 
     /* ── DOM refs ──────────────────────────────────────────────────── */
     const bellBtn   = document.getElementById('fcm-bell-btn');
@@ -3012,7 +3017,8 @@
     const denyBtn   = document.getElementById('fcm-deny-btn');
     const fcmToast  = document.getElementById('fcm-toast');
 
-    let messaging = null;
+    let messaging  = null;
+    let swReg      = null;   /* keep SW registration for getToken() */
 
     /* ── Toast helper ──────────────────────────────────────────────── */
     function showFcmToast(msg, durationMs = 4000) {
@@ -3022,168 +3028,177 @@
     }
 
     /* ── Modal helpers ─────────────────────────────────────────────── */
-    function openModal()  { modal.classList.add('open');  }
-    function closeModal() { modal.classList.remove('open'); }
+    function openModal()  { modal.classList.add('open');  document.body.style.overflow = 'hidden'; }
+    function closeModal() { modal.classList.remove('open'); document.body.style.overflow = ''; }
 
     /* ── Mark bell as subscribed ───────────────────────────────────── */
     function markSubscribed() {
       bellBtn.classList.add('subscribed');
-      bellBtn.title = 'Notifications enabled ✓';
-      bellBtn.textContent = '🔕'; // shows muted = currently enabled, click to hint
+      bellBtn.title       = 'Notifications enabled ✓';
+      bellBtn.textContent = '🔕';
       localStorage.setItem('fcm-subscribed', 'true');
     }
 
-    /* ── Save FCM token (log only — wire to your backend if needed) ── */
+    /* ── Save FCM token ────────────────────────────────────────────── */
     function saveToken(token) {
-      console.log('[FCM] Registration token:', token);
-      // TODO: POST token to your server so you can send targeted messages:
-      // fetch('/api/save-token', { method:'POST', body: JSON.stringify({ token }), headers: {'Content-Type':'application/json'} });
+      console.log('[FCM] Device token:', token);
+      localStorage.setItem('fcm-token', token);
+      /* ↓ Uncomment and point to your backend to store tokens server-side:
+      fetch('https://your-backend.com/api/save-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, project: 'church-app-637f7' })
+      }); */
     }
 
     /* ── Request permission + get token ───────────────────────────── */
     async function subscribe() {
       closeModal();
       allowBtn.textContent = 'Enabling…';
-      allowBtn.disabled = true;
+      allowBtn.disabled    = true;
 
       try {
         const permission = await Notification.requestPermission();
 
         if (permission !== 'granted') {
-          showFcmToast('⚠️ Permission denied. You can enable notifications in browser settings.');
+          showFcmToast('⚠️ Permission denied. Enable notifications in your browser settings.');
           allowBtn.textContent = '🔔 Enable Notifications';
-          allowBtn.disabled = false;
+          allowBtn.disabled    = false;
           return;
         }
 
-        const token = await messaging.getToken({ vapidKey: VAPID_KEY });
+        /* FIX: pass serviceWorkerRegistration into getToken() instead of
+                the deprecated messaging.useServiceWorker() */
+        const tokenOptions = { vapidKey: VAPID_KEY };
+        if (swReg) tokenOptions.serviceWorkerRegistration = swReg;
+
+        const token = await messaging.getToken(tokenOptions);
 
         if (token) {
           saveToken(token);
           markSubscribed();
-          showFcmToast('🔔 Notifications enabled! You\'ll hear from us soon. God bless you!', 5000);
+          showFcmToast('🔔 Notifications enabled! God bless you! 🙏', 5000);
         } else {
-          showFcmToast('⚠️ Could not get notification token. Please try again.');
+          showFcmToast('⚠️ Could not get token. Ensure the SW is registered correctly.');
         }
 
       } catch (err) {
         console.error('[FCM] Subscribe error:', err);
-        showFcmToast('⚠️ Error enabling notifications: ' + (err.message || err));
+        showFcmToast('⚠️ Error: ' + (err.message || err));
       }
 
       allowBtn.textContent = '🔔 Enable Notifications';
-      allowBtn.disabled = false;
+      allowBtn.disabled    = false;
     }
 
     /* ── Handle foreground messages ─────────────────────────────────── */
     function setupForegroundListener() {
       messaging.onMessage((payload) => {
-        console.log('[FCM] Foreground message:', payload);
-        const { title, body, icon } = payload.notification || {};
-        showFcmToast(`🔔 ${title || 'Jesus Embassy'}: ${body || ''}`, 7000);
+        console.log('[FCM] Foreground message received:', payload);
+        const n = payload.notification || {};
+        const title = n.title || 'Jesus Embassy';
+        const body  = n.body  || '';
+        showFcmToast(`🔔 ${title}: ${body}`, 7000);
 
-        // Also fire a native Notification if tab is visible
+        /* Show native notification only when tab is in background */
         if (Notification.permission === 'granted' && document.visibilityState === 'hidden') {
-          new Notification(title || 'Jesus Embassy', {
-            body:  body  || '',
-            icon:  icon  || 'icons/icon-192.png',
-            badge: 'icons/icon-96.png'
+          new Notification(title, {
+            body,
+            icon:  n.icon  || `${GH_BASE}/icons/icon-192.png`,
+            badge: `${GH_BASE}/icons/icon-96.png`
           });
         }
       });
     }
 
-    /* ── Initialise ─────────────────────────────────────────────────── */
+    /* ── Main init ─────────────────────────────────────────────────── */
     async function init() {
-      /* Don't run if Push API not supported */
       if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-        console.warn('[FCM] Push notifications not supported in this browser.');
+        console.warn('[FCM] Push notifications not supported.');
         return;
       }
 
-      /* Init Firebase (guard against double-init) */
-      const app = firebase.apps.length
+      /* Init Firebase — guard against double-init */
+      const fbApp = firebase.apps.length
         ? firebase.app()
         : firebase.initializeApp(firebaseConfig);
 
-      /* Init Analytics (non-blocking) */
-      try { firebase.analytics(); } catch (_) {}
+      try { firebase.analytics(fbApp); } catch (_) {}
 
-      messaging = firebase.messaging();
+      messaging = firebase.messaging(fbApp);
 
-      /* Register the FCM-specific service worker */
+      /* ── FIX 1: Register SW with CORRECT path for GitHub Pages ────
+         Path:  /Church-website/firebase-messaging-sw.js
+         Scope: /Church-website/
+         (No trailing dash — repo name is "Church-website" not "Church-website-")
+      ────────────────────────────────────────────────────────────── */
       try {
-        const swReg = await navigator.serviceWorker.register(
-          'firebase-messaging-sw.js',
-          { scope: '/Church-website-/' }
+        swReg = await navigator.serviceWorker.register(
+          `${GH_BASE}/firebase-messaging-sw.js`,
+          { scope: `${GH_BASE}/` }
         );
-        messaging.useServiceWorker(swReg);
-        console.log('[FCM] Messaging SW registered.');
+        console.log('[FCM] SW registered at scope:', swReg.scope);
       } catch (err) {
-        console.warn('[FCM] SW registration failed:', err);
+        console.error('[FCM] SW registration failed:', err);
+        /* Non-fatal — foreground notifications will still work */
       }
 
-      /* Listen for foreground messages */
       setupForegroundListener();
 
-      /* If already subscribed (localStorage flag), reflect in UI */
+      /* Reflect existing subscription in UI */
       if (localStorage.getItem('fcm-subscribed') === 'true') {
         markSubscribed();
       }
 
-      /* Show bell button — hidden in standalone mode (installed PWA already prompted) */
-      const isStandalone =
-        window.matchMedia('(display-mode: standalone)').matches ||
-        window.navigator.standalone === true;
+      /* ── FIX 2: Show bell in BOTH browser AND installed standalone ──
+         Installed PWA users also need to manage notifications.
+         Previously only shown in browser; now always visible.
+      ────────────────────────────────────────────────────────────── */
+      bellBtn.classList.add('visible');
 
-      if (!isStandalone) {
-        bellBtn.classList.add('visible');
-      }
-
-      /* If permission already granted and not yet subscribed, get token silently */
+      /* Silently re-fetch token if permission already granted */
       if (Notification.permission === 'granted' &&
           localStorage.getItem('fcm-subscribed') !== 'true') {
         try {
-          const token = await messaging.getToken({ vapidKey: VAPID_KEY });
+          const tokenOptions = { vapidKey: VAPID_KEY };
+          if (swReg) tokenOptions.serviceWorkerRegistration = swReg;
+          const token = await messaging.getToken(tokenOptions);
           if (token) { saveToken(token); markSubscribed(); }
         } catch (_) {}
       }
 
-      /* Bell button click — open modal or re-subscribe */
+      /* Bell click handler */
       bellBtn.addEventListener('click', () => {
         if (Notification.permission === 'granted') {
           showFcmToast('🔔 Notifications are already enabled! God bless you.');
           return;
         }
         if (Notification.permission === 'denied') {
-          showFcmToast('⚠️ Notifications are blocked. Please allow them in your browser settings.');
+          showFcmToast('⚠️ Notifications blocked. Please allow them in browser → Site Settings.');
           return;
         }
         openModal();
       });
 
-      /* Modal buttons */
-      allowBtn.addEventListener('click', subscribe);
-      denyBtn.addEventListener('click', () => {
+      /* Modal button wiring */
+      allowBtn.addEventListener('click',   subscribe);
+      denyBtn.addEventListener('click',    () => {
         closeModal();
         showFcmToast('You can enable notifications any time using the 🔔 button.');
       });
       modalClose.addEventListener('click', closeModal);
+      modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
-      /* Close modal on backdrop click */
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeModal();
-      });
-
-      /* Auto-prompt once (first visit, permission not yet decided) */
-      const autoPromptShown = sessionStorage.getItem('fcm-auto-prompted');
-      if (!autoPromptShown && Notification.permission === 'default') {
+      /* Auto-prompt: once per session, only if permission not yet decided */
+      if (!sessionStorage.getItem('fcm-auto-prompted') &&
+           Notification.permission === 'default') {
         sessionStorage.setItem('fcm-auto-prompted', '1');
-        setTimeout(openModal, 6000); // show 6 s after page load
+        setTimeout(openModal, 6000);
       }
     }
 
-    /* Run after DOM is ready */
+    /* Kick off after DOM ready */
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', init);
     } else {
