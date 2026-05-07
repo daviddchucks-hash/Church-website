@@ -1,0 +1,41 @@
+{
+  "name": "Jesus Embassy",
+  "short_name": "RCCG",
+  "description": "Welcome to Jesus Embassy — Redeemed Christian Church of God. Join us for worship, sermons, events and more.",
+  "start_url": "/Church-website/",
+  "scope": "/Church-website/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "theme_color": "#2D1B69",
+  "background_color": "#2D1B69",
+  "lang": "en",
+  "prefer_related_applications": false,
+  "categories": ["lifestyle", "social"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
