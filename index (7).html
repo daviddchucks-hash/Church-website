@@ -2825,175 +2825,120 @@
         deferredPrompt = null;
       });
     })();
-  <!-- ================================================
-       PUSH NOTIFICATIONS — Firebase Cloud Messaging
-       Added: bell button, permission modal, status toast
-  ================================================ -->
+    
+  </script>
 
-  <!-- Bell button (fixed, bottom-right) -->
-  <button id="fcm-bell-btn" aria-label="Enable push notifications" title="Enable notifications" style="
-    display: none;
-    position: fixed;
-    bottom: 88px;
-    right: 20px;
-    z-index: 8000;
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    border: none;
-    background: linear-gradient(135deg, #2D1B69, #4A2C8F);
-    color: #C9A84C;
-    font-size: 1.35rem;
-    cursor: pointer;
-    box-shadow: 0 4px 20px rgba(45,27,105,0.45);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    align-items: center;
-    justify-content: center;
-  ">🔔</button>
+  <!-- ============================================================
+       FIREBASE CLOUD MESSAGING — PUSH NOTIFICATIONS
+       Jesus Embassy PWA | GitHub Pages: /Church-website/
+       
+       FILES NEEDED IN REPO ROOT:
+         ✅ index.html  (this file)
+         ✅ firebase-messaging-sw.js
+       ============================================================ -->
 
-  <!-- Notification permission modal -->
-  <div id="fcm-modal" role="dialog" aria-modal="true" aria-labelledby="fcm-modal-title" style="
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 9500;
-    background: rgba(26,16,48,0.72);
-    backdrop-filter: blur(4px);
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-  ">
-    <div style="
-      background: #fff;
-      border-radius: 20px;
-      padding: 36px 28px 28px;
-      max-width: 360px;
-      width: 100%;
-      text-align: center;
-      box-shadow: 0 20px 60px rgba(45,27,105,0.3);
-      position: relative;
-      animation: fcmModalIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+  <!-- 1. Bell button — fixed bottom-right, hidden until FCM ready -->
+  <button
+    id="fcm-bell-btn"
+    aria-label="Enable push notifications"
+    title="Enable notifications"
+    style="
+      display:none; position:fixed; bottom:88px; right:20px; z-index:8500;
+      width:52px; height:52px; border-radius:50%; border:none;
+      background:linear-gradient(135deg,#2D1B69,#4A2C8F); color:#C9A84C;
+      font-size:1.35rem; cursor:pointer; align-items:center; justify-content:center;
+      box-shadow:0 4px 20px rgba(45,27,105,0.45);
+      transition:transform .2s ease,box-shadow .2s ease;
+    ">🔔</button>
+
+  <!-- 2. Permission modal -->
+  <div id="fcm-modal" role="dialog" aria-modal="true" aria-labelledby="fcm-modal-h"
+    style="
+      display:none; position:fixed; inset:0; z-index:9600;
+      background:rgba(26,16,48,.75); backdrop-filter:blur(4px);
+      align-items:center; justify-content:center; padding:24px;
     ">
-      <!-- Close -->
-      <button id="fcm-modal-close" aria-label="Close" style="
-        position: absolute; top: 14px; right: 16px;
-        background: none; border: none; font-size: 1.2rem;
-        color: #555060; cursor: pointer; line-height: 1;
-      ">✕</button>
-
-      <!-- Icon -->
-      <div style="
-        width: 72px; height: 72px;
-        background: linear-gradient(135deg,#2D1B69,#4A2C8F);
-        border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 2rem;
-        margin: 0 auto 20px;
-        box-shadow: 0 8px 24px rgba(45,27,105,0.35);
-      ">🔔</div>
-
-      <h3 id="fcm-modal-title" style="
-        font-family: 'Playfair Display', serif;
-        font-size: 1.3rem;
-        color: #2D1B69;
-        margin-bottom: 10px;
-      ">Stay Connected with Jesus Embassy</h3>
-
-      <p style="
-        font-size: 0.88rem;
-        color: #555060;
-        line-height: 1.65;
-        margin-bottom: 26px;
-      ">Enable notifications to receive service reminders, event announcements, and prayer alerts directly on your device.</p>
-
-      <button id="fcm-allow-btn" style="
-        width: 100%;
-        background: linear-gradient(135deg,#2D1B69,#4A2C8F);
-        color: #fff;
-        border: none;
-        border-radius: 50px;
-        padding: 14px 24px;
-        font-size: 0.95rem;
-        font-weight: 600;
-        cursor: pointer;
-        margin-bottom: 10px;
-        transition: opacity 0.2s;
-        font-family: 'Inter', sans-serif;
-      ">🔔 Enable Notifications</button>
-
-      <button id="fcm-deny-btn" style="
-        width: 100%;
-        background: none;
-        border: 1.5px solid #EEE9FF;
-        border-radius: 50px;
-        padding: 12px 24px;
-        font-size: 0.88rem;
-        color: #555060;
-        cursor: pointer;
-        font-family: 'Inter', sans-serif;
-        transition: border-color 0.2s;
-      ">Maybe later</button>
+    <div style="
+      background:#fff; border-radius:20px; padding:36px 28px 28px;
+      max-width:360px; width:100%; text-align:center; position:relative;
+      box-shadow:0 20px 60px rgba(45,27,105,.32);
+      animation:fcmIn .35s cubic-bezier(.34,1.56,.64,1) both;
+    ">
+      <button id="fcm-modal-x" aria-label="Close"
+        style="position:absolute;top:14px;right:16px;background:none;border:none;
+               font-size:1.2rem;color:#555060;cursor:pointer;line-height:1;">✕</button>
+      <div style="width:72px;height:72px;background:linear-gradient(135deg,#2D1B69,#4A2C8F);
+                  border-radius:50%;display:flex;align-items:center;justify-content:center;
+                  font-size:2rem;margin:0 auto 20px;box-shadow:0 8px 24px rgba(45,27,105,.35);">🔔</div>
+      <h3 id="fcm-modal-h"
+        style="font-family:'Playfair Display',serif;font-size:1.3rem;color:#2D1B69;margin-bottom:10px;">
+        Stay Connected with Jesus Embassy</h3>
+      <p style="font-size:.88rem;color:#555060;line-height:1.65;margin-bottom:26px;">
+        Enable notifications to receive service reminders, event announcements,
+        and prayer alerts directly on your device.</p>
+      <button id="fcm-allow-btn"
+        style="width:100%;background:linear-gradient(135deg,#2D1B69,#4A2C8F);color:#fff;
+               border:none;border-radius:50px;padding:14px 24px;font-size:.95rem;
+               font-weight:600;cursor:pointer;margin-bottom:10px;
+               font-family:'Inter',sans-serif;transition:opacity .2s;">
+        🔔 Enable Notifications</button>
+      <button id="fcm-deny-btn"
+        style="width:100%;background:none;border:1.5px solid #EEE9FF;border-radius:50px;
+               padding:12px 24px;font-size:.88rem;color:#555060;cursor:pointer;
+               font-family:'Inter',sans-serif;">
+        Maybe later</button>
     </div>
   </div>
 
-  <!-- FCM status toast (separate from existing #toast) -->
-  <div id="fcm-toast" style="
-    display: none;
-    position: fixed;
-    top: 80px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 9999;
-    background: #2D1B69;
-    color: #fff;
-    padding: 12px 22px;
-    border-radius: 50px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    white-space: nowrap;
-    box-shadow: 0 6px 24px rgba(45,27,105,0.4);
-    font-family: 'Inter', sans-serif;
-    animation: fcmToastIn 0.3s ease both;
-  "></div>
+  <!-- 3. FCM status toast (separate from existing site toast) -->
+  <div id="fcm-toast"
+    style="
+      display:none; position:fixed; top:80px; left:50%; transform:translateX(-50%);
+      z-index:9700; background:#2D1B69; color:#fff;
+      padding:12px 22px; border-radius:50px; font-size:.85rem; font-weight:500;
+      white-space:nowrap; max-width:90vw; box-shadow:0 6px 24px rgba(45,27,105,.4);
+      font-family:'Inter',sans-serif;
+    "></div>
 
+  <!-- 4. FCM-specific styles -->
   <style>
-    /* Bell button hover */
-    #fcm-bell-btn:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(45,27,105,0.55); }
-    #fcm-bell-btn.subscribed { background: linear-gradient(135deg,#C9A84C,#E8C97E); color: #2D1B69; }
-    #fcm-bell-btn.visible    { display: flex !important; }
-
-    /* Modal open state */
-    #fcm-modal.open { display: flex !important; }
-
-    /* FCM toast show state */
-    #fcm-toast.show { display: block !important; }
-
-    @keyframes fcmModalIn {
-      from { opacity: 0; transform: scale(0.88) translateY(20px); }
-      to   { opacity: 1; transform: scale(1)    translateY(0);    }
-    }
-    @keyframes fcmToastIn {
-      from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
-      to   { opacity: 1; transform: translateX(-50%) translateY(0);     }
+    #fcm-bell-btn:hover           { transform:scale(1.1); box-shadow:0 6px 28px rgba(45,27,105,.55); }
+    #fcm-bell-btn.fcm-visible     { display:flex !important; }
+    #fcm-bell-btn.fcm-subscribed  { background:linear-gradient(135deg,#C9A84C,#E8C97E); color:#2D1B69; }
+    #fcm-modal.fcm-open           { display:flex !important; }
+    #fcm-toast.fcm-show           { display:block !important; }
+    @keyframes fcmIn {
+      from { opacity:0; transform:scale(.88) translateY(20px); }
+      to   { opacity:1; transform:scale(1)   translateY(0);    }
     }
   </style>
 
-  <!-- Firebase SDKs (compat build — no bundler needed) -->
+  <!-- 5. Firebase SDKs (compat — no bundler required) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
 
+  <!-- 6. FCM initialisation + notification logic -->
   <script>
   /* ================================================================
-     FIREBASE PUSH NOTIFICATIONS — Jesus Embassy
-     GitHub Pages repo: daviddchucks-hash.github.io/Church-website/
-     Fixed: SW path, scope, deprecated useServiceWorker, standalone bell
+     FIREBASE CLOUD MESSAGING — Jesus Embassy PWA
+     Repo: daviddchucks-hash.github.io/Church-website/
+     
+     FIXES APPLIED vs previous broken version:
+       ✅ Missing </script> tag restored (was causing ALL JS to break)
+       ✅ SW path fixed: /Church-website/firebase-messaging-sw.js
+       ✅ SW scope fixed: /Church-website/  (no trailing dash)
+       ✅ Deprecated messaging.useServiceWorker() removed
+       ✅ serviceWorkerRegistration passed into getToken() correctly
+       ✅ Full debug console.log coverage added
+       ✅ Bell visible in both browser and installed standalone
+       ✅ Permission state checked before prompting
   ================================================================ */
   (function () {
     'use strict';
 
-    /* ── Firebase config ───────────────────────────────────────────── */
-    const firebaseConfig = {
+    /* ── Config ──────────────────────────────────────────────────── */
+    const FB_CONFIG = {
       apiKey:            'AIzaSyCuAIyM54XWy4DaYqoFYoEIUP0mQNaZQY4',
       authDomain:        'church-app-637f7.firebaseapp.com',
       projectId:         'church-app-637f7',
@@ -3002,203 +2947,269 @@
       appId:             '1:534721516086:web:1dd27eae690c620098be97',
       measurementId:     'G-JJL8SP6LNW'
     };
-
-    /* VAPID public key from Firebase Console → Project Settings → Cloud Messaging */
     const VAPID_KEY = 'BD9OJEHu9mVHq9TuPn89avERMGT09er4ZZQzRMvHRaP379C6Xocoq6GW5OtB4SlJEwvIKH8iER6xnBYP7y0kbV8';
 
-    /* GitHub Pages project site base path — MUST match repo name exactly */
-    const GH_BASE = '/Church-website';
+    /* GitHub Pages project path — MUST match repo name exactly, no trailing slash variations */
+    const GH_BASE   = '/Church-website';
+    const SW_PATH   = GH_BASE + '/firebase-messaging-sw.js';
+    const SW_SCOPE  = GH_BASE + '/';
 
-    /* ── DOM refs ──────────────────────────────────────────────────── */
-    const bellBtn   = document.getElementById('fcm-bell-btn');
-    const modal     = document.getElementById('fcm-modal');
-    const modalClose= document.getElementById('fcm-modal-close');
-    const allowBtn  = document.getElementById('fcm-allow-btn');
-    const denyBtn   = document.getElementById('fcm-deny-btn');
-    const fcmToast  = document.getElementById('fcm-toast');
+    /* ── DOM refs ────────────────────────────────────────────────── */
+    const bellBtn  = document.getElementById('fcm-bell-btn');
+    const modal    = document.getElementById('fcm-modal');
+    const modalX   = document.getElementById('fcm-modal-x');
+    const allowBtn = document.getElementById('fcm-allow-btn');
+    const denyBtn  = document.getElementById('fcm-deny-btn');
+    const toast    = document.getElementById('fcm-toast');
 
-    let messaging  = null;
-    let swReg      = null;   /* keep SW registration for getToken() */
+    let messaging = null;
+    let swReg     = null;
+    let toastTimer = null;
 
-    /* ── Toast helper ──────────────────────────────────────────────── */
-    function showFcmToast(msg, durationMs = 4000) {
-      fcmToast.textContent = msg;
-      fcmToast.classList.add('show');
-      setTimeout(() => fcmToast.classList.remove('show'), durationMs);
+    /* ── Helpers ─────────────────────────────────────────────────── */
+    function log(msg, data) {
+      if (data !== undefined) console.log('[FCM]', msg, data);
+      else                    console.log('[FCM]', msg);
+    }
+    function warn(msg, err) {
+      console.warn('[FCM] ⚠', msg, err || '');
     }
 
-    /* ── Modal helpers ─────────────────────────────────────────────── */
-    function openModal()  { modal.classList.add('open');  document.body.style.overflow = 'hidden'; }
-    function closeModal() { modal.classList.remove('open'); document.body.style.overflow = ''; }
+    function showToast(msg, ms) {
+      ms = ms || 4500;
+      toast.textContent = msg;
+      toast.classList.add('fcm-show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('fcm-show'), ms);
+    }
 
-    /* ── Mark bell as subscribed ───────────────────────────────────── */
+    function openModal()  {
+      log('Opening permission modal');
+      document.body.style.overflow = 'hidden';
+      modal.classList.add('fcm-open');
+    }
+    function closeModal() {
+      document.body.style.overflow = '';
+      modal.classList.remove('fcm-open');
+    }
+
     function markSubscribed() {
-      bellBtn.classList.add('subscribed');
+      log('Marking UI as subscribed');
+      bellBtn.classList.add('fcm-subscribed');
       bellBtn.title       = 'Notifications enabled ✓';
       bellBtn.textContent = '🔕';
       localStorage.setItem('fcm-subscribed', 'true');
     }
 
-    /* ── Save FCM token ────────────────────────────────────────────── */
     function saveToken(token) {
-      console.log('[FCM] Device token:', token);
+      log('FCM device token obtained:', token.substring(0, 30) + '…');
       localStorage.setItem('fcm-token', token);
-      /* ↓ Uncomment and point to your backend to store tokens server-side:
-      fetch('https://your-backend.com/api/save-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, project: 'church-app-637f7' })
-      }); */
+      /*
+        TO SEND PUSH MESSAGES:
+        Copy this token from the browser console and use it in:
+          Firebase Console → Cloud Messaging → Send test message → FCM token
+        OR POST it to your backend to store and send messages programmatically.
+      */
     }
 
-    /* ── Request permission + get token ───────────────────────────── */
+    /* ── Step 1: Register FCM service worker ─────────────────────── */
+    async function registerSW() {
+      log('Registering FCM SW at:', SW_PATH, '| scope:', SW_SCOPE);
+      try {
+        swReg = await navigator.serviceWorker.register(SW_PATH, { scope: SW_SCOPE });
+        log('FCM SW registered successfully. Scope:', swReg.scope);
+        return true;
+      } catch (err) {
+        warn('FCM SW registration failed:', err);
+        warn('Check: is firebase-messaging-sw.js in the repo ROOT?');
+        warn('Expected URL: https://daviddchucks-hash.github.io' + SW_PATH);
+        return false;
+      }
+    }
+
+    /* ── Step 2: Subscribe (request permission + get token) ──────── */
     async function subscribe() {
       closeModal();
       allowBtn.textContent = 'Enabling…';
       allowBtn.disabled    = true;
+      log('Requesting notification permission…');
+
+      /* Check: Safari/iOS requires user gesture — this runs from button click, so OK */
+      let permission;
+      try {
+        permission = await Notification.requestPermission();
+        log('Permission result:', permission);
+      } catch (err) {
+        warn('requestPermission() threw:', err);
+        showToast('⚠️ Could not request permission: ' + err.message);
+        allowBtn.textContent = '🔔 Enable Notifications';
+        allowBtn.disabled    = false;
+        return;
+      }
+
+      if (permission !== 'granted') {
+        warn('Permission not granted. State:', permission);
+        showToast(
+          permission === 'denied'
+            ? '⚠️ Notifications blocked. Go to browser → Site Settings → Allow.'
+            : '⚠️ Permission dismissed. Tap 🔔 to try again.'
+        );
+        allowBtn.textContent = '🔔 Enable Notifications';
+        allowBtn.disabled    = false;
+        return;
+      }
+
+      log('Permission granted. Fetching FCM token…');
+
+      /* Pass SW registration into getToken — required for Firebase 9+ compat */
+      const tokenOptions = { vapidKey: VAPID_KEY };
+      if (swReg) {
+        tokenOptions.serviceWorkerRegistration = swReg;
+        log('Using SW registration for getToken()');
+      } else {
+        warn('swReg is null — FCM will attempt to use default SW (may fail)');
+      }
 
       try {
-        const permission = await Notification.requestPermission();
-
-        if (permission !== 'granted') {
-          showFcmToast('⚠️ Permission denied. Enable notifications in your browser settings.');
-          allowBtn.textContent = '🔔 Enable Notifications';
-          allowBtn.disabled    = false;
-          return;
-        }
-
-        /* FIX: pass serviceWorkerRegistration into getToken() instead of
-                the deprecated messaging.useServiceWorker() */
-        const tokenOptions = { vapidKey: VAPID_KEY };
-        if (swReg) tokenOptions.serviceWorkerRegistration = swReg;
-
         const token = await messaging.getToken(tokenOptions);
-
         if (token) {
           saveToken(token);
           markSubscribed();
-          showFcmToast('🔔 Notifications enabled! God bless you! 🙏', 5000);
+          showToast('🔔 Notifications enabled! God bless you! 🙏', 5500);
         } else {
-          showFcmToast('⚠️ Could not get token. Ensure the SW is registered correctly.');
+          warn('getToken() returned empty. Possible causes: SW not registered, VAPID mismatch, Firebase project misconfigured.');
+          showToast('⚠️ Token not returned. Check console for details.');
         }
-
       } catch (err) {
-        console.error('[FCM] Subscribe error:', err);
-        showFcmToast('⚠️ Error: ' + (err.message || err));
+        warn('getToken() failed:', err);
+        showToast('⚠️ Token error: ' + (err.message || err));
       }
 
       allowBtn.textContent = '🔔 Enable Notifications';
       allowBtn.disabled    = false;
     }
 
-    /* ── Handle foreground messages ─────────────────────────────────── */
-    function setupForegroundListener() {
+    /* ── Step 3: Foreground message handler ──────────────────────── */
+    function setupOnMessage() {
       messaging.onMessage((payload) => {
-        console.log('[FCM] Foreground message received:', payload);
-        const n = payload.notification || {};
+        log('Foreground message received:', payload);
+        const n     = payload.notification || {};
         const title = n.title || 'Jesus Embassy';
         const body  = n.body  || '';
-        showFcmToast(`🔔 ${title}: ${body}`, 7000);
-
-        /* Show native notification only when tab is in background */
-        if (Notification.permission === 'granted' && document.visibilityState === 'hidden') {
+        showToast('🔔 ' + title + (body ? ': ' + body : ''), 7000);
+        /* Native notification when tab is not focused */
+        if (Notification.permission === 'granted' && document.visibilityState !== 'visible') {
           new Notification(title, {
             body,
-            icon:  n.icon  || `${GH_BASE}/icons/icon-192.png`,
-            badge: `${GH_BASE}/icons/icon-96.png`
+            icon:  n.icon  || GH_BASE + '/icons/icon-192.png',
+            badge: GH_BASE + '/icons/icon-96.png'
           });
         }
       });
+      log('Foreground message listener registered');
     }
 
-    /* ── Main init ─────────────────────────────────────────────────── */
+    /* ── Main init ───────────────────────────────────────────────── */
     async function init() {
-      if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-        console.warn('[FCM] Push notifications not supported.');
+      log('=== FCM INIT START ===');
+      log('Page:', location.href);
+      log('Protocol:', location.protocol, '(must be https: or localhost for push)');
+      log('Notification API available:', 'Notification' in window);
+      log('ServiceWorker API available:', 'serviceWorker' in navigator);
+      log('Current permission state:', Notification.permission);
+
+      /* Hard requirement checks */
+      if (!('Notification' in window)) {
+        warn('Notification API not available — push notifications unsupported in this browser.');
+        return;
+      }
+      if (!('serviceWorker' in navigator)) {
+        warn('ServiceWorker API not available — push notifications require a service worker.');
+        return;
+      }
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        warn('Page is not on HTTPS — push notifications will not work on:', location.protocol + '//' + location.hostname);
         return;
       }
 
       /* Init Firebase — guard against double-init */
-      const fbApp = firebase.apps.length
-        ? firebase.app()
-        : firebase.initializeApp(firebaseConfig);
+      log('Initialising Firebase app…');
+      const fbApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(FB_CONFIG);
+      log('Firebase app ready. Project:', fbApp.options.projectId);
 
-      try { firebase.analytics(fbApp); } catch (_) {}
+      try { firebase.analytics(fbApp); log('Firebase Analytics ready.'); }
+      catch (e) { warn('Analytics init failed (non-fatal):', e.message); }
 
+      log('Initialising Firebase Messaging…');
       messaging = firebase.messaging(fbApp);
+      log('Firebase Messaging ready.');
 
-      /* ── FIX 1: Register SW with CORRECT path for GitHub Pages ────
-         Path:  /Church-website/firebase-messaging-sw.js
-         Scope: /Church-website/
-         (No trailing dash — repo name is "Church-website" not "Church-website-")
-      ────────────────────────────────────────────────────────────── */
-      try {
-        swReg = await navigator.serviceWorker.register(
-          `${GH_BASE}/firebase-messaging-sw.js`,
-          { scope: `${GH_BASE}/` }
-        );
-        console.log('[FCM] SW registered at scope:', swReg.scope);
-      } catch (err) {
-        console.error('[FCM] SW registration failed:', err);
-        /* Non-fatal — foreground notifications will still work */
-      }
+      /* Register FCM SW */
+      await registerSW();
 
-      setupForegroundListener();
+      /* Foreground listener */
+      setupOnMessage();
 
-      /* Reflect existing subscription in UI */
+      /* Restore subscribed state from previous session */
       if (localStorage.getItem('fcm-subscribed') === 'true') {
+        log('Previously subscribed — restoring UI state.');
         markSubscribed();
       }
 
-      /* ── FIX 2: Show bell in BOTH browser AND installed standalone ──
-         Installed PWA users also need to manage notifications.
-         Previously only shown in browser; now always visible.
-      ────────────────────────────────────────────────────────────── */
-      bellBtn.classList.add('visible');
+      /* Always show bell button (browser AND installed standalone) */
+      bellBtn.classList.add('fcm-visible');
+      log('Bell button shown.');
 
-      /* Silently re-fetch token if permission already granted */
-      if (Notification.permission === 'granted' &&
-          localStorage.getItem('fcm-subscribed') !== 'true') {
+      /* If already granted and token missing, fetch silently */
+      if (Notification.permission === 'granted' && localStorage.getItem('fcm-subscribed') !== 'true') {
+        log('Permission already granted but not yet subscribed — attempting silent token fetch…');
         try {
           const tokenOptions = { vapidKey: VAPID_KEY };
           if (swReg) tokenOptions.serviceWorkerRegistration = swReg;
           const token = await messaging.getToken(tokenOptions);
-          if (token) { saveToken(token); markSubscribed(); }
-        } catch (_) {}
+          if (token) { saveToken(token); markSubscribed(); log('Silent token fetch successful.'); }
+          else { warn('Silent token fetch returned empty token.'); }
+        } catch (e) { warn('Silent token fetch failed:', e.message); }
       }
 
-      /* Bell click handler */
+      /* Bell click */
       bellBtn.addEventListener('click', () => {
+        log('Bell clicked. Current permission:', Notification.permission);
         if (Notification.permission === 'granted') {
-          showFcmToast('🔔 Notifications are already enabled! God bless you.');
+          showToast('🔔 Notifications are already enabled! God bless you.');
           return;
         }
         if (Notification.permission === 'denied') {
-          showFcmToast('⚠️ Notifications blocked. Please allow them in browser → Site Settings.');
+          showToast('⚠️ Blocked. Go to browser → Site Settings → Notifications → Allow.');
           return;
         }
         openModal();
       });
 
-      /* Modal button wiring */
+      /* Modal wiring */
       allowBtn.addEventListener('click',   subscribe);
-      denyBtn.addEventListener('click',    () => {
-        closeModal();
-        showFcmToast('You can enable notifications any time using the 🔔 button.');
-      });
-      modalClose.addEventListener('click', closeModal);
-      modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+      denyBtn.addEventListener('click',    () => { closeModal(); showToast('Tap 🔔 anytime to enable notifications.'); });
+      modalX.addEventListener('click',     closeModal);
+      modal.addEventListener('click',      (e) => { if (e.target === modal) closeModal(); });
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
-      /* Auto-prompt: once per session, only if permission not yet decided */
-      if (!sessionStorage.getItem('fcm-auto-prompted') &&
-           Notification.permission === 'default') {
-        sessionStorage.setItem('fcm-auto-prompted', '1');
-        setTimeout(openModal, 6000);
+      /* Auto-prompt: once per session, only if undecided */
+      if (!sessionStorage.getItem('fcm-prompted') && Notification.permission === 'default') {
+        log('Auto-prompt scheduled for 6s.');
+        sessionStorage.setItem('fcm-prompted', '1');
+        setTimeout(() => {
+          log('Auto-prompt firing now.');
+          openModal();
+        }, 6000);
+      } else {
+        log('Auto-prompt skipped. Prompted before:', !!sessionStorage.getItem('fcm-prompted'),
+            '| Permission:', Notification.permission);
       }
+
+      log('=== FCM INIT COMPLETE ===');
     }
 
-    /* Kick off after DOM ready */
+    /* Kick off */
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', init);
     } else {
